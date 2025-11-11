@@ -12,7 +12,7 @@ const AssignTask = () => {
   const canvasRef = useRef(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
-  const [currentFacingMode, setCurrentFacingMode] = useState('user'); // 'user' for front, 'environment' for back
+  const [currentFacingMode, setCurrentFacingMode] = useState('environment'); // 'user' for front, 'environment' for back
   const [stream, setStream] = useState(null);
 
   // Your Google Apps Script Web App URL
@@ -112,7 +112,7 @@ const AssignTask = () => {
   };
 
   useEffect(() => {
-    openCamera();
+    openCamera('environment');
     fetchPersonToMeetOptions();
 
     const now = new Date();
