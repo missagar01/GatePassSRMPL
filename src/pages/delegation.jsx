@@ -3,104 +3,96 @@ import { useState, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   CheckCircle2,
-  X,
-  Search,
-  Clock,
-  User,
-  Calendar,
-  MapPin,
-  UserCheck,
   DoorClosed,
+  DoorOpen,
   RefreshCw,
   AlertCircle,
   Phone,
-  DoorOpen
+  Calendar,
+  Clock,
+  UserCheck,
+  MapPin
 } from "lucide-react"
 
 const GatePassClosure = () => {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState("active")
-  const [activeGatePasses, setActiveGatePasses] = useState([])
-  const [closedGatePasses, setClosedGatePasses] = useState([])
+  const [activeTab, setActiveTab] = useState("pending")
+  const [pendingGatePasses, setPendingGatePasses] = useState([])
+  const [historyGatePasses, setHistoryGatePasses] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [toast, setToast] = useState({ show: false, message: "", type: "" })
   const [closingPasses, setClosingPasses] = useState(new Set())
 
-  // Mock data
-  const mockActiveGatePassData = [
-    {
-      id: "GP001",
-      visitorName: "John Doe",
-      mobileNumber: "9876543210",
-      email: "john.doe@email.com",
-      personToMeet: "Manager Smith",
-      purposeOfVisit: "Business Meeting",
-      entryDate: "24/09/2025",
-      entryTime: "09:30",
-      exitTime: null,
-      status: "Active",
-      visitorAddress: "123 Main Street, City",
-      photo: "/api/placeholder/80/80"
-    },
-    {
-      id: "GP002",
-      visitorName: "Jane Smith",
-      mobileNumber: "8765432109",
-      email: "jane.smith@email.com",
-      personToMeet: "Director Johnson",
-      purposeOfVisit: "Project Discussion",
-      entryDate: "24/09/2025",
-      entryTime: "10:15",
-      exitTime: null,
-      status: "Active",
-      visitorAddress: "456 Oak Avenue, Town",
-      photo: "/api/placeholder/80/80"
-    },
-    {
-      id: "GP003",
-      visitorName: "राम शर्मा",
-      mobileNumber: "7654321098",
-      email: "",
-      personToMeet: "HR Manager",
-      purposeOfVisit: "Interview",
-      entryDate: "24/09/2025",
-      entryTime: "11:00",
-      exitTime: null,
-      status: "Active",
-      visitorAddress: "789 Gandhi Road, Village",
-      photo: "/api/placeholder/80/80"
-    }
-  ]
+  // Your Google Apps Script Web App URL
+  const webAppUrl = "https://script.google.com/macros/s/AKfycbzIlixuocy7PD7fFp8-0R689eauMalOHY5RsngXrIQ1vRYM_PUBMEHPsYHbS2rXT_j6/exec"
 
-  const mockClosedGatePassData = [
-    {
-      id: "GP004",
-      visitorName: "Sarah Wilson",
-      mobileNumber: "9988776655",
-      email: "sarah@email.com",
-      personToMeet: "Admin Head",
-      purposeOfVisit: "Documentation",
-      entryDate: "23/09/2025",
-      entryTime: "14:30",
-      exitTime: "16:45",
-      status: "Closed",
-      visitorAddress: "321 Park Street, City",
-      photo: "/api/placeholder/80/80"
-    }
-  ]
-
+  // Function to fetch data from Google Sheets
   const fetchGatePassData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setActiveGatePasses(mockActiveGatePassData)
-      setClosedGatePasses(mockClosedGatePassData)
+
+      // Fetch data from your Google Apps Script web app
+      const response = await fetch(`${webAppUrl}?action=getVisitors`)
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const visitorsData = await response.json()
+
+      // Process the data and separate based on column N and O conditions
+      const pendingData = []
+      const historyData = []
+
+      visitorsData.forEach((visitor, index) => {
+        // Generate a unique ID if not available
+        const visitorId = visitor['Serial No.'] || `VIS${String(index + 1).padStart(3, '0')}`
+
+        // Get values from columns N and O
+        const columnN = visitor['ColumnN'] || visitor['Gate Pass Approved'] || null // Adjust column name as per your sheet
+        const columnO = visitor['ColumnO'] || visitor['Gate Pass Closed'] || null // Adjust column name as per your sheet
+
+        const gatePass = {
+          id: visitorId,
+          visitorName: visitor['Visitor Name'] || 'N/A',
+          mobileNumber: visitor['Mobile Number'] || 'N/A',
+          email: visitor['Email'] || '',
+          personToMeet: visitor['Person to Meet'] || 'N/A',
+          purposeOfVisit: visitor['Purpose of Visit'] || 'N/A',
+          entryDate: visitor['Date of Visit'] || 'N/A',
+          entryTime: visitor['Entry Time'] || 'N/A',
+          exitTime: columnN, // Column N value
+          closedTimestamp: columnO, // Column O value
+          status: columnO ? "Closed" : "Pending",
+          visitorAddress: visitor['Address'] || '',
+          photo: visitor['Photo'] || '/api/placeholder/80/80'
+        }
+
+        // Apply conditions: Pending tab - Column N NOT NULL and Column O NULL
+        // History tab - Column N NOT NULL and Column O NOT NULL
+        if (columnN && !columnO) {
+          // Pending tab condition: Column N NOT NULL, Column O NULL
+          pendingData.push(gatePass)
+        } else if (columnN && columnO) {
+          // History tab condition: Column N NOT NULL, Column O NOT NULL
+          historyData.push(gatePass)
+        }
+        // If Column N is NULL, don't show in either tab
+      })
+
+      setPendingGatePasses(pendingData)
+      setHistoryGatePasses(historyData)
+
     } catch (error) {
       console.error("Error fetching gate pass data:", error)
-      setError("Failed to load gate pass data: " + error.message)
+      setError("Failed to load gate pass data. Please try again.")
+
+      // Fallback to empty arrays if fetch fails
+      setPendingGatePasses([])
+      setHistoryGatePasses([])
     } finally {
       setLoading(false)
     }
@@ -125,27 +117,51 @@ const GatePassClosure = () => {
     setClosingPasses(prev => new Set([...prev, gatePassId]))
 
     try {
-      const currentTime = new Date().toLocaleTimeString('en-GB', {
+      const currentTimestamp = new Date().toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
         hour12: false
       })
 
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Find the gate pass to close
+      const gatePassToClose = pendingGatePasses.find(pass => pass.id === gatePassId)
 
-      const gatePassToClose = activeGatePasses.find(pass => pass.id === gatePassId)
       if (gatePassToClose) {
+        // Update local state - move from pending to history
+        setPendingGatePasses(prev => prev.filter(pass => pass.id !== gatePassId))
+
         const closedGatePass = {
           ...gatePassToClose,
           status: "Closed",
-          exitTime: currentTime
+          closedTimestamp: currentTimestamp
         }
 
-        setActiveGatePasses(prev => prev.filter(pass => pass.id !== gatePassId))
-        setClosedGatePasses(prev => [closedGatePass, ...prev])
-      }
+        setHistoryGatePasses(prev => [closedGatePass, ...prev])
 
-      showToast(`Gate Pass ${gatePassId} closed successfully!`, "success")
+        // Send update to Google Sheets - update column O with timestamp
+        try {
+          const updateResponse = await fetch(webAppUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `action=closeGatePass&visitorId=${encodeURIComponent(gatePassId)}&timestamp=${encodeURIComponent(currentTimestamp)}`
+          })
+
+          if (!updateResponse.ok) {
+            throw new Error('Failed to update Google Sheets')
+          } a
+
+          showToast(`Gate Pass ${gatePassId} closed successfully!`, "success")
+        } catch (updateError) {
+          console.error("Failed to update sheet:", updateError)
+          showToast("Gate pass closed locally but failed to update sheet.", "warning")
+        }
+      }
 
     } catch (error) {
       console.error("Error closing gate pass:", error)
@@ -159,7 +175,7 @@ const GatePassClosure = () => {
     }
   }
 
-  const currentData = activeTab === "active" ? activeGatePasses : closedGatePasses
+  const currentData = activeTab === "pending" ? pendingGatePasses : historyGatePasses
 
   const filteredData = currentData.filter(pass => {
     if (!searchTerm) return true
@@ -178,11 +194,19 @@ const GatePassClosure = () => {
     navigate("/login")
   }
 
+  const handleRefresh = () => {
+    fetchGatePassData()
+    showToast("Data refreshed successfully!", "success")
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-100 via-orange-50 to-amber-50">
 
       {/* Logo Section */}
       <div className="bg-white px-4 py-2 text-center border-b border-gray-200/100">
+      </div>
+
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 p-2 sm:p-4">
         <div className="flex items-center justify-center">
           <img
             src="/logo.jpg"
@@ -190,9 +214,6 @@ const GatePassClosure = () => {
             className="w-full max-w-[280px] sm:max-w-[320px] md:max-w-[360px] object-contain"
           />
         </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 p-2 sm:p-4">
 
         {/* Header */}
         <div className="text-center py-4 sm:py-6">
@@ -202,57 +223,44 @@ const GatePassClosure = () => {
           <p className="text-sm text-gray-600 mt-1">गेट पास प्रबंधन</p>
         </div>
 
-        {/* Controls */}
-        {/* <div className="bg-orange-50/80 backdrop-blur-sm rounded-lg shadow-sm border border-orange-200/50 p-3 sm:p-4">
-          <div className="flex justify-center">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by ID, name, mobile..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 text-sm border border-orange-200 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400"
-              />
-            </div>
-          </div>
-        </div> */}
 
         {/* Tabs */}
         <div className="bg-orange-50/80 backdrop-blur-sm rounded-lg shadow-sm border border-orange-200/50 overflow-hidden">
           <div className="grid grid-cols-2">
             <button
-              onClick={() => setActiveTab("active")}
-              className={`py-3 sm:py-4 px-2 sm:px-4 text-center transition-all ${activeTab === "active"
-                ? "bg-gradient-to-r from-emerald-400 to-teal-500 text-white"
+              onClick={() => setActiveTab("pending")}
+              className={`py-3 sm:py-4 px-2 sm:px-4 text-center transition-all ${activeTab === "pending"
+                ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
                 : "bg-orange-100/50 text-orange-700 hover:bg-orange-200/50"
                 }`}
             >
               <div className="flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base font-medium">
                 <DoorOpen className="h-4 w-4" />
-                Active ({activeGatePasses.length})
+                Pending ({pendingGatePasses.length})
               </div>
             </button>
             <button
-              onClick={() => setActiveTab("closed")}
-              className={`py-3 sm:py-4 px-2 sm:px-4 text-center transition-all ${activeTab === "closed"
-                ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white"
+              onClick={() => setActiveTab("history")}
+              className={`py-3 sm:py-4 px-2 sm:px-4 text-center transition-all ${activeTab === "history"
+                ? "bg-gradient-to-r from-emerald-400 to-teal-500 text-white"
                 : "bg-orange-100/50 text-orange-700 hover:bg-orange-200/50"
                 }`}
             >
               <div className="flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base font-medium">
                 <DoorClosed className="h-4 w-4" />
-                Closed ({closedGatePasses.length})
+                History ({historyGatePasses.length})
               </div>
             </button>
           </div>
         </div>
 
+
+
         {/* Content */}
         {loading ? (
           <div className="bg-orange-50/80 backdrop-blur-sm rounded-lg shadow-sm border border-orange-200/50 p-8 text-center">
             <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-orange-500 border-t-transparent mb-2"></div>
-            <p className="text-orange-700 text-sm">Loading...</p>
+            <p className="text-orange-700 text-sm">Loading visitor data...</p>
           </div>
         ) : error ? (
           <div className="bg-orange-50/80 backdrop-blur-sm rounded-lg shadow-sm border border-orange-200/50 p-6 text-center">
@@ -273,7 +281,7 @@ const GatePassClosure = () => {
             </h3>
             <p className="text-orange-600 text-sm">
               {searchTerm ? "Try different search terms" :
-                activeTab === "active" ? "All visitors checked out" : "No closed passes yet"}
+                activeTab === "pending" ? "No pending gate passes found" : "No history available"}
             </p>
           </div>
         ) : (
@@ -293,13 +301,18 @@ const GatePassClosure = () => {
                       <span className="bg-white text-orange-700 px-2 py-0.5 rounded text-xs font-semibold border border-orange-200">
                         {gatePass.id}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${gatePass.status === "Active"
-                        ? "bg-emerald-500 text-white"
-                        : "bg-gray-500 text-white"
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${gatePass.status === "Pending"
+                        ? "bg-amber-500 text-white"
+                        : "bg-emerald-500 text-white"
                         }`}>
                         {gatePass.status}
                       </span>
                     </div>
+                    {activeTab === "history" && gatePass.closedTimestamp && (
+                      <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded border">
+                        Closed: {gatePass.closedTimestamp}
+                      </span>
+                    )}
                   </div>
 
                   {/* Main Content - Two Columns */}
@@ -315,8 +328,20 @@ const GatePassClosure = () => {
                           <span>{gatePass.mobileNumber}</span>
                         </div>
                         {gatePass.email && (
-                          <div className="text-xs text-gray-600 ml-4">
-                            {gatePass.email}
+                          <div className="flex items-center text-xs text-gray-600 mt-1">
+                            <span>{gatePass.email}</span>
+                          </div>
+                        )}
+                        {gatePass.photo && gatePass.photo !== '/api/placeholder/80/80' && (
+                          <div className="mt-2">
+                            <img
+                              src={gatePass.photo}
+                              alt={gatePass.visitorName}
+                              className="w-16 h-16 object-cover rounded border border-gray-300"
+                              onError={(e) => {
+                                e.target.style.display = 'none'
+                              }}
+                            />
                           </div>
                         )}
                       </div>
@@ -343,41 +368,39 @@ const GatePassClosure = () => {
                       <div className="flex items-start text-xs sm:text-sm text-gray-700">
                         <Calendar className="h-3 w-3 text-orange-500 mr-1.5 mt-0.5 flex-shrink-0" />
                         <div>
-                          <span className="font-medium">Date: </span>
+                          <span className="font-medium">Visit Date: </span>
                           <span className="text-gray-600">{gatePass.entryDate}</span>
                         </div>
                       </div>
 
                       <div className="flex items-start text-xs sm:text-sm text-gray-700">
                         <Clock className="h-3 w-3 text-blue-500 mr-1.5 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <span className="font-medium">Entry: </span>
+                        {/* <div>
+                          <span className="font-medium">Entry Time: </span>
                           <span className="text-gray-600">{gatePass.entryTime}</span>
                           {gatePass.exitTime && (
                             <div className="mt-0.5">
-                              <span className="font-medium">Exit: </span>
+                              <span className="font-medium">Exit Time: </span>
                               <span className="text-gray-600">{gatePass.exitTime}</span>
                             </div>
                           )}
-                        </div>
+                        </div> */}
                       </div>
 
-                      <div className="bg-white/60 rounded p-2 border border-orange-100">
-                        <div className="flex items-start">
-                          <MapPin className="h-3 w-3 text-gray-500 mr-1.5 mt-0.5 flex-shrink-0" />
+                      {gatePass.visitorAddress && (
+                        <div className="flex items-start text-xs sm:text-sm text-gray-700">
+                          <MapPin className="h-3 w-3 text-red-500 mr-1.5 mt-0.5 flex-shrink-0" />
                           <div>
-                            <span className="text-xs font-medium text-gray-700">Address:</span>
-                            <p className="text-xs text-gray-600 mt-0.5 leading-tight line-clamp-2">
-                              {gatePass.visitorAddress}
-                            </p>
+                            <span className="font-medium">Address: </span>
+                            <span className="text-gray-600">{gatePass.visitorAddress}</span>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Action Button */}
-                  {activeTab === "active" && (
+                  {/* Action Button - Only show for pending gate passes */}
+                  {activeTab === "pending" && (
                     <button
                       onClick={() => handleCloseGatePass(gatePass.id)}
                       disabled={isClosing}
@@ -420,7 +443,7 @@ const GatePassClosure = () => {
       {/* Toast */}
       {toast.show && (
         <div className="fixed top-4 left-4 right-4 z-50 flex justify-center">
-          <div className={`max-w-sm w-full px-4 py-3 rounded-lg shadow-lg ${toast.type === "success" ? "bg-emerald-500" : "bg-red-500"
+          <div className={`max-w-sm w-full px-4 py-3 rounded-lg shadow-lg ${toast.type === "success" ? "bg-emerald-500" : toast.type === "warning" ? "bg-amber-500" : "bg-red-500"
             } text-white`}>
             <div className="flex items-center text-sm">
               <CheckCircle2 className="h-4 w-4 mr-2 flex-shrink-0" />
