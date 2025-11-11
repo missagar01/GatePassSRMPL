@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, User, Phone, Mail, MapPin, FileText, Calendar, Clock, UserCheck } from "lucide-react";
+import { Camera, User, Phone, Mail, MapPin, FileText, Calendar, Clock, UserCheck, RotateCcw } from "lucide-react";
 
 const AssignTask = () => {
   const navigate = useNavigate();
@@ -12,6 +12,8 @@ const AssignTask = () => {
   const canvasRef = useRef(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [currentFacingMode, setCurrentFacingMode] = useState('user'); // 'user' for front, 'environment' for back
+  const [stream, setStream] = useState(null);
 
   // Your Google Apps Script Web App URL
   const webAppUrl = "https://script.google.com/macros/s/AKfycbzIlixuocy7PD7fFp8-0R689eauMalOHY5RsngXrIQ1vRYM_PUBMEHPsYHbS2rXT_j6/exec";
@@ -65,6 +67,50 @@ const AssignTask = () => {
     }
   };
 
+  const openCamera = async (facingMode = 'user') => {
+    try {
+      // Close existing stream if any
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: 640,
+          height: 480,
+          facingMode: facingMode
+        }
+      });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = newStream;
+        setIsCameraOpen(true);
+        setCurrentFacingMode(facingMode);
+        setStream(newStream);
+      }
+    } catch (error) {
+      console.error("Error accessing camera:", error);
+      showToast("Camera access failed", "error");
+    }
+  };
+
+  const switchCamera = async () => {
+    const newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+    await openCamera(newFacingMode);
+    showToast(`Switched to ${newFacingMode === 'user' ? 'front' : 'back'} camera`, "success");
+  };
+
+  const closeCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraOpen(false);
+  };
+
   useEffect(() => {
     openCamera();
     fetchPersonToMeetOptions();
@@ -93,29 +139,6 @@ const AssignTask = () => {
     };
   }, []);
 
-  const openCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: 'user' }
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setIsCameraOpen(true);
-      }
-    } catch (error) {
-      console.error("Error accessing camera:", error);
-      showToast("Camera access failed", "error");
-    }
-  };
-
-  const closeCamera = () => {
-    if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-      setIsCameraOpen(false);
-    }
-  };
-
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current) {
       const canvas = canvasRef.current;
@@ -134,7 +157,7 @@ const AssignTask = () => {
   const retakePhoto = () => {
     setCapturedPhoto(null);
     setFormData(prev => ({ ...prev, photo: null }));
-    openCamera();
+    openCamera(currentFacingMode);
   };
 
   const handleChange = (e) => {
@@ -347,6 +370,15 @@ const AssignTask = () => {
                         <div className="relative bg-black rounded-lg overflow-hidden mb-3">
                           <video ref={videoRef} autoPlay className="w-full h-48 object-cover" />
                           <canvas ref={canvasRef} className="hidden" />
+                          {/* Camera Switch Button */}
+                          <button
+                            type="button"
+                            onClick={switchCamera}
+                            className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
+                            title={`Switch to ${currentFacingMode === 'user' ? 'back' : 'front'} camera`}
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </button>
                         </div>
                         <button
                           type="button"
@@ -498,4 +530,3 @@ const AssignTask = () => {
 };
 
 export default AssignTask;
-
