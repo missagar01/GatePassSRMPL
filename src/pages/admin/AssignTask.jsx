@@ -36,13 +36,13 @@ const AssignTask = () => {
       // Test if the endpoint is working
       const testResponse = await fetch(`${webAppUrl}?action=test`);
       const testText = await testResponse.text();
-      console.log("Test response:", testText);
+      // console.log("Test response:", testText);
 
       // If test works, try the actual request
       const response = await fetch(`${webAppUrl}?action=getPersonToMeetOptions`);
 
       const text = await response.text();
-      console.log("Actual response:", text);
+      // console.log("Actual response:", text);
 
       // If it's HTML, throw error
       if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
@@ -266,11 +266,11 @@ const AssignTask = () => {
       })
         .then(() => {
           // With no-cors mode, we can't read the response, but the request is sent
-          console.log('Data submitted successfully');
+          // console.log('Data submitted successfully');
           resolve();
         })
         .catch(error => {
-          console.log('Submission completed (may show as error due to no-cors)');
+          // console.log('Submission completed (may show as error due to no-cors)');
           resolve(); // Still resolve to continue
         });
     });

@@ -14,20 +14,14 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
   const [userRole, setUserRole] = useState("")
   const [isVideoPlaying, setIsVideoPlaying] = useState(false)
 
-  // Check authentication on component mount
+  // Get user info on component mount
   useEffect(() => {
     const storedUsername = sessionStorage.getItem('username')
     const storedRole = sessionStorage.getItem('role')
 
-    if (!storedUsername) {
-      // Redirect to login if not authenticated
-      navigate("/login")
-      return
-    }
-
-    setUsername(storedUsername)
+    setUsername(storedUsername || "")
     setUserRole(storedRole || "user")
-  }, [navigate])
+  }, [])
 
   // Handle logout
   const handleLogout = () => {
@@ -39,74 +33,12 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
 
   // Filter dataCategories based on user role
   const dataCategories = [
-    //{ id: "main", name: "PURAB", link: "/dashboard/data/main" },
     { id: "sales", name: "Checklist", link: "/dashboard/data/sales" },
-    // { id: "service", name: "Service", link: "/dashboard/data/service" },
-    //{ id: "account", name: "RKL", link: "/dashboard/data/account" },
-    //{ id: "warehouse", name: "REFRASYNTH", link: "/dashboard/data/warehouse" },
-    //{ id: "delegation", name: "Delegation", link: "/dashboard/data/delegation" },
-    //{ id: "purchase", name: "Slag Crusher", link: "/dashboard/data/purchase" },
-    //{ id: "director", name: "Hr", link: "/dashboard/data/director" },
-    //{ id: "managing-director", name: "PURAB", link: "/dashboard/data/managing-director" },
-    // { id: "coo", name: "COO", link: "/dashboard/data/coo" },
-    // { id: "jockey", name: "Jockey", link: "/dashboard/data/jockey" },
   ]
 
   // Update the routes array based on user role
   const routes = [
-    // {
-    //   href: "/dashboard/admin",
-    //   label: "Dashboard",
-    //   icon: Database,
-    //   active: location.pathname === "/dashboard/admin",
-    //   showFor: ["admin", "user"] // Show for both roles
-    // },
-    // {
-    //   href: "/dashboard/quick-task",
-    //   label: "Quick Task",
-    //   icon: Zap,
-    //   active: location.pathname === "/dashboard/quick-task",
-    //   showFor: ["admin", "user"] // Only show for admin
-    // },
-    // {
-    //   href: "/dashboard/assign-task",
-    //   label: "Assign Task",
-    //   icon: CheckSquare,
-    //   active: location.pathname === "/dashboard/assign-task",
-    //   showFor: ["admin"] // Only show for admin
-    // },
-
-    // {
-    //   href: "/dashboard/delegation",
-    //   label: "Delegation",
-    //   icon: ClipboardList,
-    //   active: location.pathname === "/dashboard/delegation",
-    //   showFor: ["admin", "user"] // Only show for admin
-    // },
-    // {
-    //   href: "#",
-    //   label: "Data",
-    //   icon: Database,
-    //   active: location.pathname.includes("/dashboard/data"),
-    //   submenu: true,
-    //   showFor: ["admin", "user"] // Show for both roles
-    // },
-
-    // {
-    //   href: "/dashboard/license",
-    //   label: "License",
-    //   icon: KeyRound,
-    //   active: location.pathname === "/dashboard/license",
-    //   showFor: ["admin", "user"] // show both
-    // },
-
-    // {
-    //   href: "/dashboard/traning-video",
-    //   label: "Training Video",
-    //   icon: Video,
-    //   active: location.pathname === "/dashboard/traning-video",
-    //   showFor: ["admin", "user"] //  show both
-    // },
+    // Your routes here (commented out in your original code)
   ]
 
   const getAccessibleDepartments = () => {
@@ -138,43 +70,13 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
   const accessibleRoutes = getAccessibleRoutes()
   const accessibleDepartments = getAccessibleDepartments()
 
-  // License Modal Component
-  const LicenseModal = () => {
-    // Function to convert YouTube URL to embed URL
-    const getYouTubeEmbedUrl = (url) => {
-      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-      const match = url.match(regExp);
-      return match && match[2].length === 11
-        ? `https://www.youtube.com/embed/${match[2]}?autoplay=1&rel=0`
-        : url;
-    };
-
-
-  }
-
   return (
     <div className={`flex h-screen overflow-hidden bg-gradient-to-br from-blue-50 to-purple-50`}>
-
-
-
-
-      {/* License Modal */}
-      {isLicenseModalOpen && <LicenseModal />}
-
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-14 items-center justify-between border-b border-blue-200 bg-white px-4 md:px-6">
           <div className="flex md:hidden w-8"></div>
           <h1 className="text-lg font-semibold text-blue-700">Visitor's Request Form</h1>
-          {/*<button
-            onClick={() => setIsLicenseModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
-            title="License & Help"
-          >
-            <FileText className="h-4 w-4" />
-            <span className="text-sm font-medium">License</span>
-          </button>
-          */}
         </header>
         <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gradient-to-br from-blue-50 to-purple-50">
           {children}
@@ -192,7 +94,6 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
           </div>
         </main>
       </div>
-
     </div>
   )
 }

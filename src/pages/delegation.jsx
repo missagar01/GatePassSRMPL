@@ -19,22 +19,20 @@ const GatePassClosure = () => {
   const [activeTab, setActiveTab] = useState("pending")
   const [pendingGatePasses, setPendingGatePasses] = useState([])
   const [historyGatePasses, setHistoryGatePasses] = useState([])
-  const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [toast, setToast] = useState({ show: false, message: "", type: "" })
   const [closingPasses, setClosingPasses] = useState(new Set())
 
-  // Your Google Apps Script Web App URL
   const webAppUrl = "https://script.google.com/macros/s/AKfycbzIlixuocy7PD7fFp8-0R689eauMalOHY5RsngXrIQ1vRYM_PUBMEHPsYHbS2rXT_j6/exec"
 
-  // Function to fetch data from Google Sheets
   const fetchGatePassData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
-      // Fetch data from your Google Apps Script web app
+      console.log("🔍 Fetching raw data from Google Sheets...")
+
       const response = await fetch(`${webAppUrl}?action=getVisitors`)
 
       if (!response.ok) {
@@ -43,60 +41,69 @@ const GatePassClosure = () => {
 
       const visitorsData = await response.json()
 
-      // Process the data and separate based on column N and O conditions
-      const pendingData = []
-      const historyData = []
+      console.log("📊 RAW DATA FROM GOOGLE SHEETS:", visitorsData)
 
-      visitorsData.forEach((visitor, index) => {
-        // Generate a unique ID if not available
-        const visitorId = visitor['Serial No.'] || `VIS${String(index + 1).padStart(3, '0')}`
+      // Process all data
+      const allGatePasses = visitorsData.map((visitor, index) => {
+        const serialNo = visitor['Serial No'] || visitor['Serial No.'] || `VIS${String(index + 1).padStart(3, '0')}`
+        const columnN = visitor['Status'] || null
+        const columnO = visitor['Gate Pass Closed'] || null
 
-        // Get values from columns N and O
-        const columnN = visitor['ColumnN'] || visitor['Gate Pass Approved'] || null // Adjust column name as per your sheet
-        const columnO = visitor['ColumnO'] || visitor['Gate Pass Closed'] || null // Adjust column name as per your sheet
-
-        const gatePass = {
-          id: visitorId,
+        return {
+          id: serialNo,
           visitorName: visitor['Visitor Name'] || 'N/A',
           mobileNumber: visitor['Mobile Number'] || 'N/A',
           email: visitor['Email'] || '',
           personToMeet: visitor['Person to Meet'] || 'N/A',
           purposeOfVisit: visitor['Purpose of Visit'] || 'N/A',
           entryDate: visitor['Date of Visit'] || 'N/A',
-          entryTime: visitor['Entry Time'] || 'N/A',
-          exitTime: columnN, // Column N value
-          closedTimestamp: columnO, // Column O value
-          status: columnO ? "Closed" : "Pending",
-          visitorAddress: visitor['Address'] || '',
+          entryTime: visitor['Time of Entry'] || visitor['Entry Time'] || 'N/A',
+          exitTime: visitor['Exit Time'] || 'N/A',
+          status: columnN || 'N/A',
+          gatePassClosed: columnO,
+          visitorAddress: visitor['Visitor Address'] || visitor['Address'] || '',
           photo: visitor['Photo'] || '/api/placeholder/80/80'
         }
-
-        // Apply conditions: Pending tab - Column N NOT NULL and Column O NULL
-        // History tab - Column N NOT NULL and Column O NOT NULL
-        if (columnN && !columnO) {
-          // Pending tab condition: Column N NOT NULL, Column O NULL
-          pendingData.push(gatePass)
-        } else if (columnN && columnO) {
-          // History tab condition: Column N NOT NULL, Column O NOT NULL
-          historyData.push(gatePass)
-        }
-        // If Column N is NULL, don't show in either tab
       })
+
+      console.log("📋 ALL PROCESSED DATA:", allGatePasses)
+
+      // Filter data based on column N (Status) and column O (Gate Pass Closed) conditions
+      // Also exclude records with Status 'approved' or 'rejected'
+      const pendingData = allGatePasses.filter(pass => {
+        // Pending tab: Column O (Gate Pass Closed) should be NULL
+        // AND Status should NOT be 'approved' or 'rejected'
+        const hasValidStatus = pass.status.toLowerCase() === 'approved' &&
+          pass.status.toLowerCase() === 'rejected'
+        return (pass.gatePassClosed === null || pass.gatePassClosed === '') && hasValidStatus
+      })
+
+      const historyData = allGatePasses.filter(pass => {
+        // History tab: Both Column N (Status) and Column O (Gate Pass Closed) should be NOT NULL
+        // AND Status should NOT be 'approved' or 'rejected'
+        const hasValidStatus = pass.status.toLowerCase() !== 'approved' &&
+          pass.status.toLowerCase() !== 'rejected'
+        return pass.status !== null && pass.status !== '' &&
+          pass.gatePassClosed !== null && pass.gatePassClosed !== '' &&
+          hasValidStatus
+      })
+
+      console.log("📝 PENDING DATA (Column O NULL, Status not approved/rejected):", pendingData)
+      console.log("📚 HISTORY DATA (Column N & O NOT NULL, Status not approved/rejected):", historyData)
 
       setPendingGatePasses(pendingData)
       setHistoryGatePasses(historyData)
 
     } catch (error) {
-      console.error("Error fetching gate pass data:", error)
-      setError("Failed to load gate pass data. Please try again.")
+      console.error("❌ Error fetching data:", error)
+      setError(`Failed to load data: ${error.message}`)
 
-      // Fallback to empty arrays if fetch fails
       setPendingGatePasses([])
       setHistoryGatePasses([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [webAppUrl])
 
   useEffect(() => {
     fetchGatePassData()
@@ -127,45 +134,45 @@ const GatePassClosure = () => {
         hour12: false
       })
 
-      // Find the gate pass to close
       const gatePassToClose = pendingGatePasses.find(pass => pass.id === gatePassId)
 
       if (gatePassToClose) {
-        // Update local state - move from pending to history
         setPendingGatePasses(prev => prev.filter(pass => pass.id !== gatePassId))
 
         const closedGatePass = {
           ...gatePassToClose,
           status: "Closed",
-          closedTimestamp: currentTimestamp
+          gatePassClosed: currentTimestamp
         }
 
         setHistoryGatePasses(prev => [closedGatePass, ...prev])
 
-        // Send update to Google Sheets - update column O with timestamp
-        try {
-          const updateResponse = await fetch(webAppUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `action=closeGatePass&visitorId=${encodeURIComponent(gatePassId)}&timestamp=${encodeURIComponent(currentTimestamp)}`
-          })
+        const updateResponse = await fetch(webAppUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `action=closeGatePass&visitorId=${encodeURIComponent(gatePassId)}&timestamp=${encodeURIComponent(currentTimestamp)}`
+        })
 
-          if (!updateResponse.ok) {
-            throw new Error('Failed to update Google Sheets')
-          } a
+        if (!updateResponse.ok) {
+          throw new Error('Failed to update Google Sheets')
+        }
 
+        const result = await updateResponse.json()
+        console.log("Update response:", result)
+
+        if (result.success) {
           showToast(`Gate Pass ${gatePassId} closed successfully!`, "success")
-        } catch (updateError) {
-          console.error("Failed to update sheet:", updateError)
-          showToast("Gate pass closed locally but failed to update sheet.", "warning")
+        } else {
+          throw new Error(result.error || 'Unknown error updating sheet')
         }
       }
 
     } catch (error) {
       console.error("Error closing gate pass:", error)
-      showToast("Failed to close gate pass. Please try again.", "error")
+      showToast("Failed to close gate pass: " + error.message, "error")
+      fetchGatePassData()
     } finally {
       setClosingPasses(prev => {
         const newSet = new Set(prev)
@@ -177,35 +184,13 @@ const GatePassClosure = () => {
 
   const currentData = activeTab === "pending" ? pendingGatePasses : historyGatePasses
 
-  const filteredData = currentData.filter(pass => {
-    if (!searchTerm) return true
-
-    const searchLower = searchTerm.toLowerCase()
-    return (
-      pass.id.toLowerCase().includes(searchLower) ||
-      pass.visitorName.toLowerCase().includes(searchLower) ||
-      pass.mobileNumber.includes(searchTerm) ||
-      pass.personToMeet.toLowerCase().includes(searchLower) ||
-      pass.purposeOfVisit.toLowerCase().includes(searchLower)
-    )
-  })
-
-  const handleBackToHome = () => {
-    navigate("/login")
-  }
-
   const handleRefresh = () => {
     fetchGatePassData()
-    showToast("Data refreshed successfully!", "success")
+    showToast("Data refreshed!", "success")
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-100 via-orange-50 to-amber-50">
-
-      {/* Logo Section */}
-      <div className="bg-white px-4 py-2 text-center border-b border-gray-200/100">
-      </div>
-
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 p-2 sm:p-4">
         <div className="flex items-center justify-center">
           <img
@@ -215,7 +200,6 @@ const GatePassClosure = () => {
           />
         </div>
 
-        {/* Header */}
         <div className="text-center py-4 sm:py-6">
           <h1 className="text-lg sm:text-xl font-semibold text-gray-900">
             Gate Pass Management
@@ -223,6 +207,16 @@ const GatePassClosure = () => {
           <p className="text-sm text-gray-600 mt-1">गेट पास प्रबंधन</p>
         </div>
 
+        {/* Refresh Button */}
+        {/* <div className="flex justify-end">
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-2 bg-white text-orange-600 hover:bg-orange-50 px-3 py-2 rounded-lg border border-orange-200 text-sm font-medium transition-all shadow-sm"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </button>
+        </div> */}
 
         {/* Tabs */}
         <div className="bg-orange-50/80 backdrop-blur-sm rounded-lg shadow-sm border border-orange-200/50 overflow-hidden">
@@ -254,13 +248,11 @@ const GatePassClosure = () => {
           </div>
         </div>
 
-
-
         {/* Content */}
         {loading ? (
           <div className="bg-orange-50/80 backdrop-blur-sm rounded-lg shadow-sm border border-orange-200/50 p-8 text-center">
             <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-orange-500 border-t-transparent mb-2"></div>
-            <p className="text-orange-700 text-sm">Loading visitor data...</p>
+            <p className="text-orange-700 text-sm">Loading data...</p>
           </div>
         ) : error ? (
           <div className="bg-orange-50/80 backdrop-blur-sm rounded-lg shadow-sm border border-orange-200/50 p-6 text-center">
@@ -273,20 +265,21 @@ const GatePassClosure = () => {
               Try again
             </button>
           </div>
-        ) : filteredData.length === 0 ? (
+        ) : currentData.length === 0 ? (
           <div className="bg-orange-50/80 backdrop-blur-sm rounded-lg shadow-sm border border-orange-200/50 p-8 text-center">
             <DoorClosed className="h-12 w-12 text-orange-400 mx-auto mb-3" />
             <h3 className="font-medium text-orange-700 mb-1">
-              {searchTerm ? "No matches found" : `No ${activeTab} gate passes`}
+              {activeTab === "pending" ? "No pending gate passes" : "No history records"}
             </h3>
             <p className="text-orange-600 text-sm">
-              {searchTerm ? "Try different search terms" :
-                activeTab === "pending" ? "No pending gate passes found" : "No history available"}
+              {activeTab === "pending"
+                ? "No gate passes waiting for closure"
+                : "No completed gate passes found"}
             </p>
           </div>
         ) : (
           <div className="space-y-2 sm:space-y-3">
-            {filteredData.map((gatePass) => {
+            {currentData.map((gatePass) => {
               const isClosing = closingPasses.has(gatePass.id)
 
               return (
@@ -301,22 +294,38 @@ const GatePassClosure = () => {
                       <span className="bg-white text-orange-700 px-2 py-0.5 rounded text-xs font-semibold border border-orange-200">
                         {gatePass.id}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${gatePass.status === "Pending"
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${gatePass.status.toLowerCase() === "pending"
                         ? "bg-amber-500 text-white"
-                        : "bg-emerald-500 text-white"
+                        : gatePass.status.toLowerCase() === "closed" ? "bg-emerald-500 text-white" : "bg-gray-500 text-white"
                         }`}>
                         {gatePass.status}
                       </span>
                     </div>
-                    {activeTab === "history" && gatePass.closedTimestamp && (
-                      <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded border">
-                        Closed: {gatePass.closedTimestamp}
-                      </span>
+
+                    {/* Close Button - Top Right, Smaller Width */}
+                    {activeTab === "pending" && (!gatePass.gatePassClosed || gatePass.gatePassClosed === '') && (
+                      <button
+                        onClick={() => handleCloseGatePass(gatePass.id)}
+                        disabled={isClosing}
+                        className="w-auto px-3 py-1.5 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white rounded text-xs font-medium transition-all disabled:opacity-50 shadow-sm flex items-center gap-1.5"
+                      >
+                        {isClosing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border border-white border-t-transparent"></div>
+                            <span>Closing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <DoorClosed className="h-3 w-3" />
+                            <span>Close</span>
+                          </>
+                        )}
+                      </button>
                     )}
                   </div>
 
-                  {/* Main Content - Two Columns */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  {/* Main Content */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Left Column */}
                     <div className="space-y-2">
                       <div>
@@ -330,18 +339,6 @@ const GatePassClosure = () => {
                         {gatePass.email && (
                           <div className="flex items-center text-xs text-gray-600 mt-1">
                             <span>{gatePass.email}</span>
-                          </div>
-                        )}
-                        {gatePass.photo && gatePass.photo !== '/api/placeholder/80/80' && (
-                          <div className="mt-2">
-                            <img
-                              src={gatePass.photo}
-                              alt={gatePass.visitorName}
-                              className="w-16 h-16 object-cover rounded border border-gray-300"
-                              onError={(e) => {
-                                e.target.style.display = 'none'
-                              }}
-                            />
                           </div>
                         )}
                       </div>
@@ -375,16 +372,16 @@ const GatePassClosure = () => {
 
                       <div className="flex items-start text-xs sm:text-sm text-gray-700">
                         <Clock className="h-3 w-3 text-blue-500 mr-1.5 mt-0.5 flex-shrink-0" />
-                        {/* <div>
+                        <div>
                           <span className="font-medium">Entry Time: </span>
                           <span className="text-gray-600">{gatePass.entryTime}</span>
-                          {gatePass.exitTime && (
+                          {gatePass.exitTime && gatePass.exitTime !== 'N/A' && (
                             <div className="mt-0.5">
                               <span className="font-medium">Exit Time: </span>
                               <span className="text-gray-600">{gatePass.exitTime}</span>
                             </div>
                           )}
-                        </div> */}
+                        </div>
                       </div>
 
                       {gatePass.visitorAddress && (
@@ -398,45 +395,22 @@ const GatePassClosure = () => {
                       )}
                     </div>
                   </div>
-
-                  {/* Action Button - Only show for pending gate passes */}
-                  {activeTab === "pending" && (
-                    <button
-                      onClick={() => handleCloseGatePass(gatePass.id)}
-                      disabled={isClosing}
-                      className="w-full py-2 px-4 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white rounded font-medium text-xs sm:text-sm transition-all disabled:opacity-50 shadow-sm"
-                    >
-                      {isClosing ? (
-                        <div className="flex items-center justify-center gap-1.5">
-                          <div className="animate-spin rounded-full h-3 w-3 border border-white border-t-transparent"></div>
-                          <span>Closing...</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center gap-1.5">
-                          <DoorClosed className="h-3 w-3" />
-                          <span>Close Gate Pass</span>
-                        </div>
-                      )}
-                    </button>
-                  )}
                 </div>
               )
             })}
           </div>
         )}
 
-        {/* Footer - Fixed at bottom */}
-        <div className="fixed bottom-0 left-0 right-0 bg-orange-50/90 backdrop-blur-sm border-t border-orange-200 py-1 z-10">
-          <div className="text-center">
-            <a
-              href="https://www.botivate.in/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-orange-700 text-xs"
-            >
-              Powered by <span className="font-medium">Botivate</span>
-            </a>
-          </div>
+        {/* Footer */}
+        <div className="text-center py-4">
+          <a
+            href="https://www.botivate.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-orange-700 text-xs"
+          >
+            Powered by <span className="font-medium">Botivate</span>
+          </a>
         </div>
       </div>
 
