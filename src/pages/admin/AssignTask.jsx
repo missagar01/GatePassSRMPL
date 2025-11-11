@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, User, Phone, Mail, MapPin, FileText, Calendar, Clock, UserCheck, RotateCcw } from "lucide-react";
+import { Camera, User, Phone, Mail, MapPin, FileText, Calendar, Clock, UserCheck, SwitchCamera } from "lucide-react";
 
 const AssignTask = () => {
   const navigate = useNavigate();
@@ -377,7 +377,7 @@ const AssignTask = () => {
                             className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all"
                             title={`Switch to ${currentFacingMode === 'user' ? 'back' : 'front'} camera`}
                           >
-                            <RotateCcw className="h-4 w-4" />
+                            <SwitchCamera className="h-4 w-4" />
                           </button>
                         </div>
                         <button
