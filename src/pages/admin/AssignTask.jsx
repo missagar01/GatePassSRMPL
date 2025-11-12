@@ -313,7 +313,7 @@ const AssignTask = () => {
 
 
               <div className="text-left">
-                <h1 className="text-3xl sm:text-xl md:text-3xl font-semibold text-gray-900">
+                <h1 className="text-2xl sm:text-xl md:text-3xl font-semibold text-gray-900">
                   Request Gate Pass
                 </h1>
               </div>
