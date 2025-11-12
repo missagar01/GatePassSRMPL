@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FileText, ScrollText, Users, User, KeyRound, Clock, CheckCircle, LogOut, Bell, Calendar, UserCheck, XCircle, Eye, EyeOff, Phone, MapPin } from 'lucide-react'
+import { FileText, ScrollText, Users, User, KeyRound, Clock, CheckCircle, LogOut, Bell, Calendar, UserCheck, XCircle, Eye, EyeOff, Phone, MapPin, RefreshCw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from "../components/layout/AdminLayout"
 
@@ -69,14 +69,11 @@ const VisitorManagement = () => {
             const data = await response.json()
 
             if (data.success && data.visitors) {
-                // Filter visitors where 'Person to Meet' matches logged-in username
-                const currentUsername = sessionStorage.getItem('username') || username
-                const userVisitors = data.visitors.filter(visitor =>
-                    visitor['Person to Meet'] === currentUsername
-                )
+                // REMOVED: Username filtering - now showing all data
+                const allVisitors = data.visitors
 
-                // Process the filtered data
-                const processedVisits = userVisitors.map(visitor => ({
+                // Process all data without filtering
+                const processedVisits = allVisitors.map(visitor => ({
                     serialNo: visitor['Serial No.'] || 'N/A',
                     visitorName: visitor['Visitor Name'] || 'N/A',
                     mobileNumber: visitor['Mobile Number'] || 'N/A',
@@ -84,12 +81,11 @@ const VisitorManagement = () => {
                     purposeOfVisit: visitor['Purpose of Visit'] || 'N/A',
                     personToMeet: visitor['Person to Meet'] || 'N/A',
                     dateOfVisit: visitor['Date of Visit'] || 'N/A',
-                    status: visitor['Status'] || 'pending' // Assuming you have a status column
+                    status: visitor['Status'] || 'pending'
                 }))
 
                 // Sort all visits in descending order by Serial Number
                 const sortedVisits = processedVisits.sort((a, b) => {
-                    // Extract numeric part from serial numbers like 'SRMPL-9', 'SRMPL-8', etc.
                     const getSerialNumber = (serial) => {
                         if (!serial || serial === 'N/A') return 0;
                         const match = serial.toString().match(/-(\d+)$/);
@@ -107,8 +103,6 @@ const VisitorManagement = () => {
 
                 setPendingVisits(pending)
                 setApprovedVisits(approved)
-
-                // showToast(`Loaded ${pending.length} pending and ${approved.length} approved visits`, "success")
             } else {
                 throw new Error(data.error || 'Failed to fetch visitor data')
             }
@@ -628,6 +622,7 @@ const VisitorManagement = () => {
             <div className="min-h-screen bg-gray-50 p-4 sm:p-6 overflow-y-auto relative">
                 <div className="max-w-6xl mx-auto">
                     {/* Header with Welcome Message */}
+                    {/* Header with Welcome Message */}
                     <div className="mb-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div className="flex items-center gap-3">
@@ -636,17 +631,38 @@ const VisitorManagement = () => {
                                 </div>
                                 <div>
                                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                                        Welcome, {username}
+                                        Visitor Management Dashboard
                                     </h1>
-                                    <p className="text-gray-600 text-sm">Visitor Management Dashboard</p>
+                                    <p className="text-gray-600 text-sm">Manage all visitor requests and history</p>
                                 </div>
                             </div>
-                            {isLoading && (
-                                <div className="flex items-center gap-2 text-blue-600 text-sm">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-                                    <span>Loading visitors...</span>
-                                </div>
-                            )}
+                            <div className="flex items-center gap-3">
+                                {/* <div className="flex items-center gap-3"> */}
+                                <button
+                                    onClick={() => {
+                                        if (activeTab === "Requests") {
+                                            fetchPendingVisits();
+                                        } else if (activeTab === "Approved") {
+                                            fetchApprovedVisits();
+                                        }
+                                    }}
+                                    disabled={isLoading}
+                                    className="hidden sm:flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                            <span>Refreshing...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <RefreshCw className="h-4 w-4" />
+                                            <span>Refresh</span>
+                                        </>
+                                    )}
+                                </button>
+
+                            </div>
                         </div>
                     </div>
 
@@ -683,6 +699,14 @@ const VisitorManagement = () => {
                             </div>
                         </div>
                     </div>
+                    {isLoading && (
+                        <div className="flex justify-center items-center py-8">
+                            <div className="flex items-center gap-3 bg-blue-50 text-blue-700 px-6 py-4 rounded-xl border border-blue-200">
+                                <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
+                                <span className="font-medium">Loading visitor data...</span>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Content Sections */}
                     <div className="space-y-4">
@@ -698,10 +722,10 @@ const VisitorManagement = () => {
                                         />
                                     ))
                                 ) : (
-                                    <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-200">
-                                        <Clock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                                        <h3 className="text-lg font-semibold text-gray-600 mb-2">No Pending Requests</h3>
-                                        <p className="text-gray-500">All visitor requests have been processed.</p>
+                                    <div>
+                                        {/* <Clock className="h-16 w-16 text-gray-300 mx-auto mb-4" /> */}
+                                        {/* <h3 className="text-lg font-semibold text-gray-600 mb-2">No Pending Requests</h3> */}
+                                        {/* <p className="text-gray-500">All visitor requests have been processed.</p> */}
                                     </div>
                                 )}
                             </div>

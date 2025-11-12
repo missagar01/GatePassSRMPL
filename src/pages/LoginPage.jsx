@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 
 const LoginPage = () => {
@@ -13,6 +13,27 @@ const LoginPage = () => {
 
   // Your Google Apps Script web app URL
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIlixuocy7PD7fFp8-0R689eauMalOHY5RsngXrIQ1vRYM_PUBMEHPsYHbS2rXT_j6/exec"
+
+  // Add this useEffect at the top of your LoginPage component
+  useEffect(() => {
+    // Check if there's a redirect parameter in the URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const redirectPath = urlParams.get('redirect')
+
+    if (redirectPath) {
+      // Auto-authenticate for direct access to specific routes
+      const publicRoutes = ['/dashboard/assign-task', '/dashboard/delegation', '/dashboard/license']
+
+      if (publicRoutes.some(route => redirectPath.startsWith(route))) {
+        // Set temporary authentication for direct access
+        sessionStorage.setItem("username", "temp-user")
+        sessionStorage.setItem("role", "user")
+
+        // Navigate to the intended route
+        navigate(redirectPath)
+      }
+    }
+  }, [navigate])
 
   const handleAdminCredentialChange = (e) => {
     const { name, value } = e.target
