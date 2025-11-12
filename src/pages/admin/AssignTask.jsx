@@ -298,12 +298,25 @@ const AssignTask = () => {
             action="javascript:void(0)"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-white-500 to-amber-100 p-5 text-center">
-              <div className=" text-center border-gray-200">
-                <img src="/logo.png" alt="Logo" className="w-full max-w-[280px] mx-auto" />
+            <div className="flex items-center justify-center">
+              <div className="flex-shrink-0 mr-6 p-4">
+                <button
+                  onClick={() => navigate('/login')}
+                  className="flex items-center justify-center w-10 h-10 bg-white text-orange-600 hover:bg-orange-50 rounded-lg border border-orange-200 transition-all shadow-sm hover:shadow-md"
+                  title="Go back to login"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </button>
               </div>
-              <h2 className="text-lg font-bold text-black-500">Visitor Information Form</h2>
-              <p className="text-black-100 text-sm mt-1">कृपया सभी आवश्यक जानकारी भरें</p>
+
+
+              <div className="text-left">
+                <h1 className="text-3xl sm:text-xl md:text-3xl font-semibold text-gray-900">
+                  Request Gate Pass
+                </h1>
+              </div>
             </div>
 
             <div className="p-6">
