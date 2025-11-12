@@ -299,7 +299,7 @@ const AssignTask = () => {
           >
             {/* Header */}
             <div className="flex items-center justify-center">
-              <div className="flex-shrink-0 mr-6 p-4">
+              <div className="flex-shrink-0 mr-2 p-4">
                 <button
                   onClick={() => navigate('/login')}
                   className="flex items-center justify-center w-10 h-10 bg-white text-orange-600 hover:bg-orange-50 rounded-lg border border-orange-200 transition-all shadow-sm hover:shadow-md"
