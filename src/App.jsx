@@ -21,8 +21,13 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const username = sessionStorage.getItem("username")
   const role = sessionStorage.getItem("role")
 
-  // ✅ ONLY dashboard/quick-task is public
-  if (location.pathname === '/dashboard/quick-task') {
+  // ✅ PUBLIC ROUTES - dashboard/quick-task and dashboard/license
+  const publicRoutes = [
+    '/dashboard/quick-task',
+    '/dashboard/license'
+  ]
+
+  if (publicRoutes.includes(location.pathname)) {
     return children
   }
 
@@ -52,7 +57,7 @@ function App() {
         {/* Dashboard redirect */}
         <Route path="/dashboard" element={<Navigate to="/dashboard/admin" replace />} />
 
-        {/* ✅ ONLY PUBLIC ROUTE - dashboard/quick-task */}
+        {/* ✅ PUBLIC ROUTES */}
         <Route
           path="/dashboard/quick-task"
           element={
@@ -62,7 +67,16 @@ function App() {
           }
         />
 
-        {/* 🔒 ALL OTHER ROUTES PROTECTED */}
+        <Route
+          path="/dashboard/license"
+          element={
+            <ProtectedRoute>
+              <License />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 🔒 PROTECTED ROUTES */}
         <Route
           path="/dashboard/admin"
           element={
@@ -95,15 +109,6 @@ function App() {
           element={
             <ProtectedRoute>
               <DataPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/dashboard/license"
-          element={
-            <ProtectedRoute>
-              <License />
             </ProtectedRoute>
           }
         />

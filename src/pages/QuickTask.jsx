@@ -85,8 +85,9 @@ const LoginPage = () => {
                 // Reset login attempts on success
                 setLoginAttempts(0)
 
-                // Store only username in session storage
+                // ✅ STORE BOTH USERNAME AND ROLE
                 sessionStorage.setItem("username", adminCredentials.username.trim())
+                sessionStorage.setItem("role", result.role || "user") // Add this line
 
                 showToast("Login successful! Redirecting...", "success")
 
@@ -94,7 +95,6 @@ const LoginPage = () => {
                 setTimeout(() => {
                     navigate('/dashboard/license', { replace: true })
                 }, 1000)
-
             } else {
                 // Increment failed attempts
                 setLoginAttempts(prev => prev + 1)
