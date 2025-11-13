@@ -671,12 +671,7 @@ const VisitorManagement = () => {
                                     <p className="text-gray-600 text-sm">Visitor Management Dashboard</p>
                                 </div>
                             </div>
-                            {isLoading && (
-                                <div className="flex items-center gap-2 text-blue-600 text-sm">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-                                    <span>Loading visitors...</span>
-                                </div>
-                            )}
+
                         </div>
                     </div>
 
@@ -719,10 +714,16 @@ const VisitorManagement = () => {
 
                     {/* Content Sections */}
                     <div className="space-y-4">
-                        {/* Requests Tab */}
                         {activeTab === "Requests" && (
                             <div>
-                                {pendingVisits.length > 0 ? (
+                                {isLoading ? (
+                                    <div className="flex justify-center items-center py-8">
+                                        <div className="flex items-center gap-2 text-blue-600 text-sm">
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                                            <span>Loading visitors...</span>
+                                        </div>
+                                    </div>
+                                ) : pendingVisits.length > 0 ? (
                                     pendingVisits.map(visit => (
                                         <VisitCard
                                             key={visit.serialNo}
@@ -733,8 +734,8 @@ const VisitorManagement = () => {
                                 ) : (
                                     <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-200">
                                         <Clock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                                        <h3 className="text-lg font-semibold text-gray-600 mb-2">No Pending Requests</h3>
-                                        <p className="text-gray-500">All visitor requests have been processed.</p>
+                                        <h3 className="text-lg font-semibold text-gray-600 mb-2">No Visit Pending</h3>
+                                        <p className="text-gray-500">Approved and rejected visits will appear here.</p>
                                     </div>
                                 )}
                             </div>
