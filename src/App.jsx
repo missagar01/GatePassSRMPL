@@ -24,7 +24,8 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   // ✅ PUBLIC ROUTES - dashboard/quick-task and dashboard/license
   const publicRoutes = [
     '/dashboard/quick-task',
-    '/dashboard/license'
+    '/dashboard/license',
+    'dashboard/delegation'
   ]
 
   if (publicRoutes.includes(location.pathname)) {
