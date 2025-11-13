@@ -14,7 +14,7 @@ const LoginPage = () => {
     const [loginAttempts, setLoginAttempts] = useState(0)
     const navigate = useNavigate()
 
-    const webAppUrl = "https://script.google.com/macros/s/AKfycbzIlixuocy7PD7fFp8-0R689eauMalOHY5RsngXrIQ1vRYM_PUBMEHPsYHbS2rXT_j6/exec"
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbzy2KgQNVJ-mSgyLwXA1l2VBD4qQEQZvu9dy7MYrPEgOCIdJUOY7Tfa3WMGqJ3IpK3a6w/exec"
 
     // Input validation
     const validateInputs = () => {

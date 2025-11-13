@@ -12,7 +12,7 @@ const LoginPage = () => {
   const [adminLoading, setAdminLoading] = useState(false)
 
   // Your Google Apps Script web app URL
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIlixuocy7PD7fFp8-0R689eauMalOHY5RsngXrIQ1vRYM_PUBMEHPsYHbS2rXT_j6/exec"
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzy2KgQNVJ-mSgyLwXA1l2VBD4qQEQZvu9dy7MYrPEgOCIdJUOY7Tfa3WMGqJ3IpK3a6w/exec"
 
   // Add this useEffect at the top of your LoginPage component
   useEffect(() => {
@@ -54,7 +54,7 @@ const LoginPage = () => {
     setAdminLoading(true)
 
     try {
-      const scriptUrl = `https://script.google.com/macros/s/AKfycbzIlixuocy7PD7fFp8-0R689eauMalOHY5RsngXrIQ1vRYM_PUBMEHPsYHbS2rXT_j6/exec`
+      const scriptUrl = `https://script.google.com/macros/s/AKfycbzy2KgQNVJ-mSgyLwXA1l2VBD4qQEQZvu9dy7MYrPEgOCIdJUOY7Tfa3WMGqJ3IpK3a6w/exec`
 
       const formData = new FormData();
       formData.append('action', 'verifyAdmin');
