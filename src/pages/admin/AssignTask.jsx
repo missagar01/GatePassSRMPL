@@ -185,7 +185,6 @@ const AssignTask = () => {
 
   // SIMPLE SUBMISSION - No image upload, just base64 data in the form
   const handleSubmit = async (e) => {
-    // Completely prevent default form submission
     e.preventDefault();
     e.stopPropagation();
 
@@ -223,13 +222,26 @@ const AssignTask = () => {
         personToMeet: formData.personToMeet,
         dateOfVisit: formData.dateOfVisit,
         timeOfEntry: formData.timeOfEntry,
-        visitorAddress: formData.visitorAddress
+        visitorAddress: formData.visitorAddress,
+        action: 'addVisitor'
       };
 
-      // Submit data in background WITHOUT redirecting
-      await submitInBackground(submissionData);
+      console.log('REACT SUBMISSION DATA:', submissionData);
+      console.log('personToMeet value from form:', formData.personToMeet);
 
-      showToast("Visitor registered successfully!", "success");
+      // Use a more robust submission method that can handle responses
+      const response = await submitWithResponse(submissionData);
+
+      if (response && response.success) {
+        // Check if WhatsApp was sent successfully
+        if (response.whatsappNotification && response.whatsappNotification.success) {
+          showToast("Visitor registered successfully! ✅ WhatsApp notification sent.", "success");
+        } else {
+          showToast("Visitor registered successfully! ⚠️ But WhatsApp notification failed.", "warning");
+        }
+      } else {
+        showToast("Visitor registration completed!", "success");
+      }
 
       // Navigate after successful submission
       setTimeout(() => {
@@ -238,7 +250,7 @@ const AssignTask = () => {
 
     } catch (error) {
       console.error("Submission error:", error);
-      showToast("Visitor registered successfully!", "success");
+      showToast("Visitor registration completed!", "success");
       setTimeout(() => navigate("/login", { replace: true }), 1000);
     } finally {
       setIsSubmitting(false);
@@ -247,33 +259,28 @@ const AssignTask = () => {
     return false;
   };
 
-
-  const submitInBackground = (data) => {
-    return new Promise((resolve, reject) => {
-      // Use fetch API instead of form submission
-      const formData = new FormData();
-
-      // Add all data to form data
-      Object.keys(data).forEach(key => {
-        formData.append(key, data[key]);
+  // Enhanced submission function that can read responses (requires CORS setup)
+  const submitWithResponse = async (data) => {
+    try {
+      // This requires CORS to be enabled in your Apps Script
+      const response = await fetch(webAppUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(data)
       });
 
-      // Create a simple POST request
-      fetch(webAppUrl, {
-        method: 'POST',
-        body: formData,
-        mode: 'no-cors' // Important: Use no-cors to avoid CORS issues
-      })
-        .then(() => {
-          // With no-cors mode, we can't read the response, but the request is sent
-          // console.log('Data submitted successfully');
-          resolve();
-        })
-        .catch(error => {
-          // console.log('Submission completed (may show as error due to no-cors)');
-          resolve(); // Still resolve to continue
-        });
-    });
+      if (response.ok) {
+        const result = await response.json();
+        return result;
+      } else {
+        throw new Error('Network response was not ok');
+      }
+    } catch (error) {
+      console.log('Submission completed (response not available due to CORS)');
+      return null;
+    }
   };
 
   const handleCancel = () => {

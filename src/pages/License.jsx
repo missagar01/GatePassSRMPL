@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FileText, ScrollText, Users, User, KeyRound, Clock, CheckCircle, LogOut, Bell, Calendar, UserCheck, XCircle, Eye, EyeOff, Phone, MapPin, RefreshCw } from 'lucide-react'
+import { FileText, ScrollText, Users, User, KeyRound, Clock, CheckCircle, LogOut, Bell, Calendar, UserCheck, XCircle, Eye, EyeOff, Phone, MapPin } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from "../components/layout/AdminLayout"
 
@@ -69,11 +69,14 @@ const VisitorManagement = () => {
             const data = await response.json()
 
             if (data.success && data.visitors) {
-                // REMOVED: Username filtering - now showing all data
-                const allVisitors = data.visitors
+                // Filter visitors where 'Person to Meet' matches logged-in username
+                const currentUsername = sessionStorage.getItem('username') || username
+                const userVisitors = data.visitors.filter(visitor =>
+                    visitor['Person to Meet'] === currentUsername
+                )
 
-                // Process all data without filtering
-                const processedVisits = allVisitors.map(visitor => ({
+                // Process the filtered data
+                const processedVisits = userVisitors.map(visitor => ({
                     serialNo: visitor['Serial No.'] || 'N/A',
                     visitorName: visitor['Visitor Name'] || 'N/A',
                     mobileNumber: visitor['Mobile Number'] || 'N/A',
@@ -81,11 +84,12 @@ const VisitorManagement = () => {
                     purposeOfVisit: visitor['Purpose of Visit'] || 'N/A',
                     personToMeet: visitor['Person to Meet'] || 'N/A',
                     dateOfVisit: visitor['Date of Visit'] || 'N/A',
-                    status: visitor['Status'] || 'pending'
+                    status: visitor['Status'] || 'pending' // Assuming you have a status column
                 }))
 
                 // Sort all visits in descending order by Serial Number
                 const sortedVisits = processedVisits.sort((a, b) => {
+                    // Extract numeric part from serial numbers like 'SRMPL-9', 'SRMPL-8', etc.
                     const getSerialNumber = (serial) => {
                         if (!serial || serial === 'N/A') return 0;
                         const match = serial.toString().match(/-(\d+)$/);
@@ -103,6 +107,8 @@ const VisitorManagement = () => {
 
                 setPendingVisits(pending)
                 setApprovedVisits(approved)
+
+                // showToast(`Loaded ${pending.length} pending and ${approved.length} approved visits`, "success")
             } else {
                 throw new Error(data.error || 'Failed to fetch visitor data')
             }
@@ -208,6 +214,16 @@ const VisitorManagement = () => {
             formData.append('serialNo', serialNo.toString())
             formData.append('status', status)
             formData.append('approvedBy', currentUsername)
+
+            // Find the visit details for WhatsApp message
+            const visit = pendingVisits.find(v => v.serialNo === serialNo);
+
+            if (visit) {
+                formData.append('visitorName', visit.visitorName)
+                formData.append('personToMeet', visit.personToMeet)
+                formData.append('purposeOfVisit', visit.purposeOfVisit)
+                formData.append('sendWhatsApp', 'true') // Flag to send WhatsApp
+            }
 
             const response = await fetch(webAppUrl, {
                 method: 'POST',
@@ -421,18 +437,6 @@ const VisitorManagement = () => {
                             {visit.status?.charAt(0).toUpperCase() + visit.status?.slice(1)}
                         </span>
                     </div>
-
-                    {/* View Image Icon Button */}
-                    {photoUrl && (
-                        <button
-                            onClick={handleViewImage}
-                            className="flex items-center gap-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-lg transition-colors border border-gray-300"
-                            title="View Visitor Photo"
-                        >
-                            <Eye className="h-3 w-3" />
-                            <span>View Photo</span>
-                        </button>
-                    )}
                 </div>
 
                 {/* Main Content - App-like Layout */}
@@ -491,47 +495,55 @@ const VisitorManagement = () => {
                         </div>
                     </div>
 
-                    {/* Right Side - Visitor Photo */}
+                    {/* Right Side - Visitor Photo with Click to View */}
                     <div className="flex justify-center md:justify-end">
-                        <div className="w-28 h-28 bg-gray-50 rounded-2xl border-2 border-gray-200 overflow-hidden flex items-center justify-center shadow-sm">
+                        <div
+                            className="w-28 h-28 bg-gray-50 rounded-2xl border-2 border-gray-200 overflow-hidden flex items-center justify-center shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-blue-300 relative group"
+                            onClick={handleViewImage}
+                            title="Click to view photo"
+                        >
                             {photoUrl ? (
-                                <img
-                                    src={photoUrl}
-                                    alt={`${visit.visitorName}`}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        console.log("Image failed to load:", e.target.src);
-                                        if (e.target.src !== visit.photo) {
-                                            console.log("Trying original URL:", visit.photo);
-                                            e.target.src = visit.photo;
-                                        } else {
-                                            e.target.style.display = "none";
-                                            e.target.nextSibling.style.display = "flex";
-                                        }
-                                    }}
-                                    onLoad={(e) => {
-                                        console.log("Image loaded successfully:", e.target.src);
-                                    }}
-                                />
-                            ) : null}
-                            <div
-                                className={`w-full h-full flex items-center justify-center ${photoUrl ? "hidden" : "flex"
-                                    }`}
-                            >
-                                <User size={40} className="text-gray-400" />
-                            </div>
+                                <>
+                                    <img
+                                        src={photoUrl}
+                                        alt={`${visit.visitorName}`}
+                                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                        onError={(e) => {
+                                            console.log("Image failed to load:", e.target.src);
+                                            if (e.target.src !== visit.photo) {
+                                                console.log("Trying original URL:", visit.photo);
+                                                e.target.src = visit.photo;
+                                            } else {
+                                                e.target.style.display = "none";
+                                                e.target.nextSibling.style.display = "flex";
+                                            }
+                                        }}
+                                        onLoad={(e) => {
+                                            console.log("Image loaded successfully:", e.target.src);
+                                        }}
+                                    />
+                                    {/* Hover overlay */}
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                                        <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <User size={40} className="text-gray-400" />
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* Action Buttons - Left & Right Layout */}
+                {/* Action Buttons - Two Columns in One Row for Mobile */}
                 {showActions && visit.status === 'pending' && (
-                    <div className="flex gap-3 pt-3 border-t border-gray-100">
-                        {/* Left Button - Reject */}
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                        {/* Reject Button - Left Column */}
                         <button
                             onClick={() => handleRejectVisit(visit.serialNo)}
                             disabled={loadingStates[visit.serialNo]}
-                            className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all shadow-sm flex items-center justify-center gap-2 ${loadingStates[visit.serialNo] === 'rejected'
+                            className={`py-3 px-4 rounded-xl font-semibold text-sm transition-all shadow-sm flex items-center justify-center gap-2 ${loadingStates[visit.serialNo] === 'rejected'
                                 ? "bg-red-100 text-red-700 border-2 border-red-200 cursor-not-allowed"
                                 : "bg-white text-red-600 border-2 border-red-200 hover:bg-red-50 hover:border-red-300"
                                 }`}
@@ -549,11 +561,11 @@ const VisitorManagement = () => {
                             )}
                         </button>
 
-                        {/* Right Button - Approve */}
+                        {/* Approve Button - Right Column */}
                         <button
                             onClick={() => handleApproveVisit(visit.serialNo)}
                             disabled={loadingStates[visit.serialNo]}
-                            className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all shadow-sm flex items-center justify-center gap-2 ${loadingStates[visit.serialNo] === 'approved'
+                            className={`py-3 px-4 rounded-xl font-semibold text-sm transition-all shadow-sm flex items-center justify-center gap-2 ${loadingStates[visit.serialNo] === 'approved'
                                 ? "bg-green-100 text-green-700 border-2 border-green-200 cursor-not-allowed"
                                 : "bg-white text-green-600 border-2 border-green-200 hover:bg-green-50 hover:border-green-300"
                                 }`}
@@ -616,12 +628,10 @@ const VisitorManagement = () => {
         return <LoginForm />
     }
 
-    // Show main dashboard if logged in
     return (
         <AdminLayout>
             <div className="min-h-screen bg-gray-50 p-4 sm:p-6 overflow-y-auto relative">
                 <div className="max-w-6xl mx-auto">
-                    {/* Header with Welcome Message */}
                     {/* Header with Welcome Message */}
                     <div className="mb-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -631,82 +641,56 @@ const VisitorManagement = () => {
                                 </div>
                                 <div>
                                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                                        Visitor Management Dashboard
+                                        Welcome, {username} Sir
                                     </h1>
-                                    <p className="text-gray-600 text-sm">Manage all visitor requests and history</p>
+                                    <p className="text-gray-600 text-sm">Visitor Management Dashboard</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                {/* <div className="flex items-center gap-3"> */}
-                                <button
-                                    onClick={() => {
-                                        if (activeTab === "Requests") {
-                                            fetchPendingVisits();
-                                        } else if (activeTab === "Approved") {
-                                            fetchApprovedVisits();
-                                        }
-                                    }}
-                                    disabled={isLoading}
-                                    className="hidden sm:flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                            <span>Refreshing...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <RefreshCw className="h-4 w-4" />
-                                            <span>Refresh</span>
-                                        </>
-                                    )}
-                                </button>
-
-                            </div>
+                            {isLoading && (
+                                <div className="flex items-center gap-2 text-blue-600 text-sm">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                                    <span>Loading visitors...</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Tab Navigation - Clean Design */}
+                    {/* Tab Navigation - Two Columns in One Row for Mobile */}
                     <div className="mb-8">
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2">
-                            <div className="flex">
+                            <div className="grid grid-cols-2 gap-2">
+                                {/* Requests Tab - Left Column */}
                                 <button
                                     onClick={() => setActiveTab("Requests")}
-                                    className={`flex-1 py-3 px-6 text-base font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === "Requests"
+                                    className={`py-3 px-4 text-base font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === "Requests"
                                         ? "bg-blue-500 text-white shadow-sm"
                                         : "bg-white text-gray-600 hover:bg-gray-50"
                                         }`}
                                 >
                                     <Clock className="w-5 h-5" />
-                                    <span>Requests</span>
-                                    <span className="bg-white/20 text-white/90 px-2 py-1 rounded-full text-xs font-bold">
+                                    <span className="hidden xs:inline">Requests</span>
+                                    <span className="bg-white/20 text-white/90 px-2 py-1 rounded-full text-xs font-bold min-w-[24px]">
                                         {pendingVisits.length}
                                     </span>
                                 </button>
+
+                                {/* History Tab - Right Column */}
                                 <button
                                     onClick={() => setActiveTab("Approved")}
-                                    className={`flex-1 py-3 px-6 text-base font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === "Approved"
+                                    className={`py-3 px-4 text-base font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === "Approved"
                                         ? "bg-green-500 text-white shadow-sm"
                                         : "bg-white text-gray-600 hover:bg-gray-50"
                                         }`}
                                 >
                                     <CheckCircle className="w-5 h-5" />
-                                    <span>History</span>
-                                    <span className="bg-white/20 text-white/90 px-2 py-1 rounded-full text-xs font-bold">
+                                    <span className="hidden xs:inline">History</span>
+                                    <span className="bg-white/20 text-white/90 px-2 py-1 rounded-full text-xs font-bold min-w-[24px]">
                                         {approvedVisits.length}
                                     </span>
                                 </button>
                             </div>
                         </div>
                     </div>
-                    {isLoading && (
-                        <div className="flex justify-center items-center py-8">
-                            <div className="flex items-center gap-3 bg-blue-50 text-blue-700 px-6 py-4 rounded-xl border border-blue-200">
-                                <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
-                                <span className="font-medium">Loading visitor data...</span>
-                            </div>
-                        </div>
-                    )}
 
                     {/* Content Sections */}
                     <div className="space-y-4">
@@ -722,10 +706,10 @@ const VisitorManagement = () => {
                                         />
                                     ))
                                 ) : (
-                                    <div>
-                                        {/* <Clock className="h-16 w-16 text-gray-300 mx-auto mb-4" /> */}
-                                        {/* <h3 className="text-lg font-semibold text-gray-600 mb-2">No Pending Requests</h3> */}
-                                        {/* <p className="text-gray-500">All visitor requests have been processed.</p> */}
+                                    <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-200">
+                                        <Clock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                                        <h3 className="text-lg font-semibold text-gray-600 mb-2">No Pending Requests</h3>
+                                        <p className="text-gray-500">All visitor requests have been processed.</p>
                                     </div>
                                 )}
                             </div>
@@ -756,8 +740,9 @@ const VisitorManagement = () => {
 
                 {/* Toast Notification */}
                 {toast.show && (
-                    <div className="fixed top-6 right-6 left-6 sm:left-auto mx-auto sm:mx-0 max-w-sm z-50">
-                        <div className={`px-4 py-3 rounded-xl shadow-lg ${toast.type === "success" ? "bg-green-500" : "bg-red-500"} text-white`}>
+                    <div className="fixed top-4 sm:top-6 right-4 sm:right-6 left-4 sm:left-auto mx-auto sm:mx-0 max-w-sm z-50">
+                        <div className={`px-4 py-3 rounded-xl shadow-lg ${toast.type === "success" ? "bg-green-500" : "bg-red-500"
+                            } text-white`}>
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium">{toast.message}</span>
                                 <button
