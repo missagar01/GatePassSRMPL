@@ -83,6 +83,7 @@ const VisitorManagement = () => {
                     photo: visitor['Photo'] || '',
                     purposeOfVisit: visitor['Purpose of Visit'] || 'N/A',
                     personToMeet: visitor['Person to Meet'] || 'N/A',
+                    timeOfVisit: visitor['Time of Entry'] || 'N/A',
                     dateOfVisit: visitor['Date of Visit'] || 'N/A',
                     status: visitor['Status'] || 'pending' // Assuming you have a status column
                 }))
@@ -479,6 +480,30 @@ const VisitorManagement = () => {
                                             } catch (error) {
                                                 console.error('Error formatting date:', error);
                                                 return visit.dateOfVisit || 'Date not specified';
+                                            }
+                                        })()}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex items-start text-sm text-gray-600">
+                                <Clock className="h-4 w-4 text-orange-500 mr-2 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <span className="font-medium text-gray-800">Time: </span>
+                                    <span>
+                                        {(() => {
+                                            try {
+                                                if (visit.timeOfVisit && visit.timeOfVisit.includes('T')) {
+                                                    const date = new Date(visit.timeOfVisit);
+                                                    return date.toLocaleTimeString('en-IN', {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        hour12: true
+                                                    });
+                                                }
+                                                return visit.timeOfVisit || 'Time not specified';
+                                            } catch (error) {
+                                                console.error('Error formatting time:', error);
+                                                return visit.timeOfVisit || 'Time not specified';
                                             }
                                         })()}
                                     </span>
