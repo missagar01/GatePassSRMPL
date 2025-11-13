@@ -16,34 +16,23 @@ import TrainingVideo from "./pages/TrainingVideo"
 // Auth wrapper component to protect routes
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const location = useLocation()
-  const [isChecking, setIsChecking] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [userRole, setUserRole] = useState("")
 
-  useEffect(() => {
-    const checkAuth = () => {
-      const username = sessionStorage.getItem("username")
-      const role = sessionStorage.getItem("role")
+  // Simple synchronous check
+  const username = sessionStorage.getItem("username")
+  const role = sessionStorage.getItem("role")
 
-      setIsAuthenticated(!!username)
-      setUserRole(role || "")
-      setIsChecking(false)
-    }
-
-    checkAuth()
-  }, [location])
-
-  if (isChecking) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>
+  // ✅ ONLY dashboard/quick-task is public
+  if (location.pathname === '/dashboard/quick-task') {
+    return children
   }
 
-  // If no user is logged in, redirect to login but preserve the intended destination
-  if (!isAuthenticated) {
+  // For all other routes, require authentication
+  if (!username) {
     return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />
   }
 
   // If this is an admin-only route and user is not admin, redirect to dashboard
-  if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
     return <Navigate to="/dashboard/admin" replace />
   }
 
@@ -63,7 +52,17 @@ function App() {
         {/* Dashboard redirect */}
         <Route path="/dashboard" element={<Navigate to="/dashboard/admin" replace />} />
 
-        {/* Admin & User Dashboard route */}
+        {/* ✅ ONLY PUBLIC ROUTE - dashboard/quick-task */}
+        <Route
+          path="/dashboard/quick-task"
+          element={
+            <ProtectedRoute>
+              <QuickTask />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 🔒 ALL OTHER ROUTES PROTECTED */}
         <Route
           path="/dashboard/admin"
           element={
@@ -72,16 +71,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/dashboard/quick-task"
-          element={
-            <ProtectedRoute allowedRoles={["admin", "user"]}>
-              <QuickTask />
-            </ProtectedRoute>
-          }
-        />
 
-        {/* Assign Task route - accessible after selecting "Request Visit" */}
         <Route
           path="/dashboard/assign-task"
           element={
@@ -91,7 +81,6 @@ function App() {
           }
         />
 
-        {/* Delegation route - accessible after selecting "Close Gate Pass" */}
         <Route
           path="/dashboard/delegation"
           element={
@@ -101,7 +90,6 @@ function App() {
           }
         />
 
-        {/* Data routes */}
         <Route
           path="/dashboard/data/:category"
           element={
@@ -129,7 +117,6 @@ function App() {
           }
         />
 
-        {/* Specific route for Admin Data Page */}
         <Route
           path="/dashboard/data/admin"
           element={

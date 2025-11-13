@@ -147,8 +147,8 @@ const LoginPage = () => {
                     <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
                         {/* Header */}
                         <div className="bg-gradient-to-r from-orange-200 to-red-500 p-6 text-center text-white">
-                            <h2 className="text-2xl text-black font-bold">Admin Login</h2>
-                            <p className="text-gray-900 mt-1">Visitor Management System</p>
+                            <h2 className="text-2xl text-black font-bold">Login For</h2>
+                            <p className="text-gray-900 mt-1">Approve / Reject Gate Pass</p>
                             {loginAttempts > 0 && (
                                 <p className="text-sm text-red-700 mt-2">
                                     Failed attempts: {loginAttempts}/5
