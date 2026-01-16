@@ -36,15 +36,9 @@ const AssignTask = () => {
       // Test if the endpoint is working
       const testResponse = await fetch(`${webAppUrl}?action=test`);
       const testText = await testResponse.text();
-      // console.log("Test response:", testText);
-
-      // If test works, try the actual request
       const response = await fetch(`${webAppUrl}?action=getPersonToMeetOptions`);
 
       const text = await response.text();
-      // console.log("Actual response:", text);
-
-      // If it's HTML, throw error
       if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
         throw new Error('Server returned HTML instead of JSON');
       }
@@ -60,7 +54,7 @@ const AssignTask = () => {
     } catch (error) {
       console.error("Error fetching options:", error);
       // Use fallback options
-      setPersonToMeetOptions(["John Doe", "Jane Smith", "Admin", "Reception"]);
+      setPersonToMeetOptions(["No Users Found"]);
       showToast("Using default options", "warning");
     } finally {
       setIsLoadingOptions(false);

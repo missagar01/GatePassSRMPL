@@ -49,16 +49,14 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Root redirect */}
+
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* Login route */}
         <Route path="/login" element={<LoginPage />} />
 
         {/* Dashboard redirect */}
         <Route path="/dashboard" element={<Navigate to="/dashboard/admin" replace />} />
 
-        {/* ✅ PUBLIC ROUTES */}
         <Route
           path="/dashboard/quick-task"
           element={
