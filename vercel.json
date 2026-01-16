@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://13.204.80.55/api/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://cmh-backend.sagartmt.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
