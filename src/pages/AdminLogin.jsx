@@ -43,7 +43,7 @@ const LoginPage = () => {
             localStorage.setItem("email_id", userData.email_id || userData.email || "");
             localStorage.setItem("isLoggedIn", "true");
 
-            if (userInfo.role === "admin" || userInfo.user_name?.toUpperCase() === "AAKASH AGRAWAL") {
+            if (userData.role === "admin" || userData.user_name?.toUpperCase() === "AAKASH AGRAWAL") {
                 navigate("/dashboard/license", { replace: true });
             } else {
                 navigate("/dashboard/license", { replace: true });
